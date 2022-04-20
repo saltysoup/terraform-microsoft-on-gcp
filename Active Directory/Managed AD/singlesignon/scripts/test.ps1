@@ -1,0 +1,1 @@
+New-Item -Path "C:\" -Name "spammy.txt" -ItemType "file" -Value "This is spam"
