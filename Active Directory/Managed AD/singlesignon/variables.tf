@@ -18,7 +18,8 @@
 
 variable "project_id" {
     type = string
-    description = "Project ID for Managed AD"
+    description = "Project ID"
+    default     = "injae-sandbox-340804"
 }
 
 variable "region" {
@@ -62,6 +63,7 @@ variable "domain_name" {
 variable "reserved_ip_range" {
     type = string
     description = "The IP range to deploy the Managed AD resources in CIDR format eg. 10.152.100.0/24"
+    default     = "10.0.2.0/24"
 }
 
 variable "admin_account" {

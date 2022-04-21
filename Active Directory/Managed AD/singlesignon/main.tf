@@ -71,7 +71,7 @@ module "service_accounts_adfs" {
 # Create instance
 resource "google_compute_instance" "adfs_instance" {
   name         = "${random_pet.name.id}-adfs-vm"
-  machine_type = adfs_instance_machine_type
+  machine_type = var.adfs_instance_machine_type
   zone         = var.zone
   
   # target instance labels
@@ -134,6 +134,4 @@ resource "google_workflows_workflow" "runcommand" {
       label_value = each.value
     }
   )
-
-  depends_on = [google_project_service.workflows]
 }
