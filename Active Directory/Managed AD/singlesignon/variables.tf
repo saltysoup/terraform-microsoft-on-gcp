@@ -112,12 +112,6 @@ variable "instance_labels" {
   }
 }
 
-variable "region" {
-  type        = string
-  description = "Region for Cloud Workflows"
-  default     = "us-central1"
-}
-
 variable "workflows_service_account" {
   type        = string
   description = "Name for Cloud Workflows Service Account"

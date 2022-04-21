@@ -1,0 +1,194 @@
+main:
+  params: []
+  steps:
+  - init:
+      assign:
+        - project: '$${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}'
+        - zone: '${zone}'
+        - remote_script_location: '${remote_script_location}'
+        - remote_script_sha256_checksum: '${remote_script_sha256_checksum}'
+        - query_params1: '?osPolicyAssignmentId='
+        - query_params1_val: '${runcommand_name}'
+        - osconfig_base_url: '$${string("https://osconfig.googleapis.com/v1alpha/")}'
+        - set_policy_url: '$${osconfig_base_url + "projects/" + project + "/locations/" + zone + "/osPolicyAssignments"}'
+        
+
+  - set_policy:
+      try:
+        steps:
+          - set_policy_new:
+              call: http.post
+              args:
+                url: '$${set_policy_url + query_params1 + query_params1_val}'
+                auth:
+                  type: OAuth2
+                body:
+                  {
+                    "osPolicies": [
+                      {
+                        "id": "runcommand-id",
+                        "mode": "VALIDATION",
+                        "resourceGroups": [
+                          {
+                            "resources": [
+                              {
+                                "id": "invoke-remote-ps-script",
+                                "exec": {
+                                  "validate": {
+                                    "interpreter": "POWERSHELL",
+                                    "file": {
+                                      "remote": {
+                                        "uri": "${remote_script_location}", # test
+                                        "sha256Checksum": "${remote_script_sha256_checksum}"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    "rollout": {
+                      "disruptionBudget": {
+                        "percent": 100 # apply runcommand to all target instances. Customisable value https://cloud.google.com/compute/docs/osconfig/rest/v1/FixedOrPercent
+                      },
+                      "minWaitDuration": "1s"
+                    },
+                    "instanceFilter": {
+                      "inclusionLabels": [
+                        {
+                          "labels": {
+                            "${label_key}": "${label_value}"
+                          }
+                        }
+                      ]
+                    }
+                  }
+              result: set_policy_result
+          - log_set_policy_new:
+              call: sys.log
+              args:
+                text: '$${set_policy_result}'
+                severity: INFO
+      retry:
+        predicate: $${custom_predicate}
+        max_retries: 5
+        backoff:
+          initial_delay: 30
+          max_delay: 60
+          multiplier: 2
+
+  - get_policy_url: #extracting revisionId from response for projects.locations.osPolicyAssignments.get method
+        steps:
+          - set_url_path:
+              call: text.replace_all
+              args:
+                source: '$${set_policy_result.body.name}'
+                substr: '/operations/'
+                repl: '@'
+              result: policy_url 
+          - set_new_url_path:
+              assign:
+                - new_policy_url: '$${osconfig_base_url + policy_url}'
+          - log_set_url_path:
+              call: sys.log
+              args:
+                text: '$${"This is the url path for the created OS guest policy: " + string(new_policy_url)}'
+                severity: INFO
+
+  - get_policy:
+      try:
+        steps:
+          - get_policy_status:
+              call: http.get
+              args:
+                url: '$${new_policy_url}'
+                auth:
+                  type: OAuth2
+              result: get_policy_result
+          - get_policy_status_code:
+              assign:
+                - policy_status_code: '$${get_policy_result.code}'
+          - backoff_retry_if_policy_not_set:
+              switch:
+                - condition: $${policy_status_code != 200}
+                  raise: '$${"Waiting for OS guest policy to be deployed. Expecting HTTP Response 200. Received: " + string(policy_status_code)}'
+      retry:
+        predicate: $${custom_predicate}
+        max_retries: 5
+        backoff:
+          initial_delay: 60
+          max_delay: 60
+          multiplier: 2
+
+  - validate_policy:
+      try:
+        steps:
+          - log_validate_policy_url:
+              call: sys.log
+              args:
+                text: '$${"Validating successful deployment of OS guest policy using path: " + set_policy_url + "/" + query_params1_val}'
+          - validate_policy_status:
+              call: http.get
+              args:
+                url: '$${new_policy_url}'
+                auth:
+                  type: OAuth2
+              result: get_policy_result
+          - validate_policy_status_code:
+              assign:
+                - policy_status_code: '$${get_policy_result.code}'
+          - validate_backoff_retry_if_policy_not_set:
+              switch:
+                - condition: $${policy_status_code != 200}
+                  raise: '$${"Waiting to confirm successful rollout of OS guest policy. Expecting HTTP Response 200. Received: " + string(policy_status_code)}'
+      retry:
+        predicate: $${custom_predicate}
+        max_retries: 5
+        backoff:
+          initial_delay: 30
+          max_delay: 60
+          multiplier: 2
+
+  - delete_policy_cleanup:
+      try:
+        steps:
+          - log_delete_policy_url:
+              call: sys.log
+              args:
+                text: '$${"Deleting OS guest policy using path: " + set_policy_url + "/" + query_params1_val}'
+          - delete_policy:
+              call: http.delete
+              args:
+                url: '$${set_policy_url + "/" + query_params1_val}'
+                auth:
+                  type: OAuth2
+              result: delete_policy_result
+          - log_delete_policy_response:
+              call: sys.log
+              args:
+                text: '$${"Successfully deleted OS guest policy: " + delete_policy_result.body.name}'
+                severity: INFO
+      retry: # Guest policy takes few min to finish deploying, so expect some retries
+        predicate: $${custom_predicate}
+        max_retries: 10
+        backoff:
+          initial_delay: 60 # max value 60
+          max_delay: 500 
+          multiplier: 2
+
+custom_predicate:
+    params: [e]
+    steps:
+      - log_condition:
+          call: sys.log
+          args:
+            text: '$${"Expecting HTTP response code: 200. Received HTTP response: " + string(e.code)}'
+      - condition_to_retry:
+          switch:
+          - condition: '$${e.code != 200}'
+            return: True # keep retrying
+      - otherwise:
+          return: False # abort
