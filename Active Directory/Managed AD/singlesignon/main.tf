@@ -24,7 +24,7 @@ resource "random_pet" "name" {
 # Create a VPC
 resource "google_compute_network" "vpc_network" {
   project                 = var.project_id
-  name                    = var.network
+  name                    = "${random_pet.name.id}-${var.network}"
   auto_create_subnetworks = false
 }
 
@@ -76,7 +76,10 @@ resource "google_compute_instance" "adfs_instance" {
   
   # target instance labels
   for_each = var.instance_labels
-  tags = [each.key, each.value]
+  labels = {
+    each.key = each.value
+  }
+  #tags = # todo: firewall 
 
   boot_disk {
     initialize_params {
@@ -85,7 +88,7 @@ resource "google_compute_instance" "adfs_instance" {
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.subnet_adfs
+    subnetwork = google_compute_subnetwork.subnet_adfs.name
 
     access_config {
       // Ephemeral public IP
@@ -97,6 +100,10 @@ resource "google_compute_instance" "adfs_instance" {
     email  = module.service_accounts_adfs.email
     scopes = ["cloud-platform"]
   }
+
+  depends_on = [
+    google_active_directory_domain.ad_domain
+  ]
 }
 
 ## Workflows stuff
@@ -134,4 +141,7 @@ resource "google_workflows_workflow" "runcommand" {
       label_value = each.value
     }
   )
+    depends_on = [
+    google_compute_instance.adfs_instance
+  ]
 }
