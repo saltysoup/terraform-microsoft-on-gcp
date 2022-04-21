@@ -77,7 +77,7 @@ resource "google_compute_instance" "adfs_instance" {
   # target instance labels
   for_each = var.instance_labels
   labels = {
-    each.key = each.value
+    "${each.key}" = "${each.value}"
   }
   #tags = # todo: firewall 
 
@@ -137,8 +137,8 @@ resource "google_workflows_workflow" "runcommand" {
       remote_script_location = var.remote_script_location
       remote_script_sha256_checksum = var.remote_script_sha256_checksum
       runcommand_name = "runcommand-${random_pet.name.id}"
-      label_key = each.key
-      label_value = each.value
+      label_key = "${each.key}"
+      label_value = "${each.value}"
     }
   )
     depends_on = [

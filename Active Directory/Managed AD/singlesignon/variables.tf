@@ -103,7 +103,7 @@ variable "remote_script_location" {
 variable "remote_script_sha256_checksum" {
   type        = string
   description = "SHA265 checksum value of remote script"
-  default = "0071F5C5481BF2450E3BD35FFA1E0ED10CA75AFDC8CFE142B09E8BF09882301C"
+  default = "3F9A8F18E7943F2BF2C1F8A85E1AD19434B1DADE48890E16181F203C2C19842D"
 }
 
 variable "instance_labels" {
