@@ -17,10 +17,10 @@
 terraform {
   required_version = ">=0.13.0"
   required_providers {
-    google = ">= 3.43, <4.0"
+    google = ">= 3.86, <4.0"
   }
   backend "gcs" {
-    bucket = "terraform-microsoft-on-gcp-backend"
+    bucket = "terraform-gce-runbooks-1"
     prefix = "terraform/state"
   }
 }
