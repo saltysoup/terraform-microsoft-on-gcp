@@ -28,6 +28,22 @@ resource "google_compute_network" "vpc_network" {
   auto_create_subnetworks = false
 }
 
+# Create firewall rules
+resource "google_compute_firewall" "rules" {
+  project     = var.project_id
+  name        = "${random_pet.name.id}-adfs"
+  network     = google_compute_network.vpc_network.name
+  description = "Creates firewall rule targeting tagged instances"
+
+  allow {
+    protocol  = "tcp"
+    ports     = ["3389"]
+  }
+
+  source_ranges = ["35.235.240.0/20"]
+  target_tags = ["${google_compute_network.vpc_network.name}-adfs"]
+}
+
 # Create a Managed AD subnet
 resource "google_compute_subnetwork" "subnet_managedad" {
   name          = "${google_compute_network.vpc_network.name}-subnet-managedad"
@@ -79,7 +95,8 @@ resource "google_compute_instance" "adfs_instance" {
   labels = {
     "${each.key}" = "${each.value}"
   }
-  #tags = # todo: firewall 
+  
+  tags = ["${google_compute_network.vpc_network.name}-adfs"]
 
   boot_disk {
     initialize_params {
