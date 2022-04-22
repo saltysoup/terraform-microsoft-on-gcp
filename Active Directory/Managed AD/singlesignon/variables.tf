@@ -17,9 +17,9 @@
 ## Common variables
 
 variable "project_id" {
-    type = string
-    description = "Project ID"
-    default     = "injae-sandbox-340804"
+  type        = string
+  description = "Project ID"
+  default     = "injae-sandbox-340804"
 }
 
 variable "region" {
@@ -51,28 +51,34 @@ variable "network_subnet_managedad_iprange" {
 variable "locations" {
   type        = list(string)
   description = "The region/s to deploy Managed AD in list format eg. [\"us-central1\", \"asia-southeast1\"]"
-  default = ["us-central1"]
+  default     = ["us-central1"]
 }
 
 variable "domain_name" {
-    type = string
-    description = "The FQDN of your AD Domain eg. ad.contoso.com"
-    default = "ad.contoso.com"
+  type        = string
+  description = "The FQDN of your AD Domain eg. ad.contoso.com"
+  default     = "ad.contoso.com"
 }
 
 variable "reserved_ip_range" {
-    type = string
-    description = "The IP range to deploy the Managed AD resources in CIDR format eg. 10.152.100.0/24"
-    default     = "10.0.2.0/24"
+  type        = string
+  description = "The IP range to deploy the Managed AD resources in CIDR format eg. 10.152.100.0/24"
+  default     = "10.0.2.0/24"
 }
 
-variable "admin_account" {
-    type = string
-    description = "The name of delegated administrator account for Managed AD"
-    default = "setupadmin"
+variable "managedad_admin_account" {
+  type        = string
+  description = "The name of delegated administrator account for Managed AD"
+  default     = "setupadmin"
 }
 
 ## ADFS instance variables
+
+variable "local_admin_account" {
+  type        = string
+  description = "The name of delegated administrator account for Managed AD"
+  default     = "localadmin"
+}
 
 variable "network_subnet_adfs_iprange" {
   type        = string
@@ -97,17 +103,17 @@ variable "adfs_instance_machine_type" {
 variable "remote_script_location" {
   type        = string
   description = "Path of remote powershell script to execute in VM eg. https://my-bucket/myScript.ps1"
-  default     = "https://github.com/saltysoup/terraform-microsoft-on-gcp/raw/main/Active%20Directory/Managed%20AD/singlesignon/scripts/test.ps1"
+  default     = "https://storage.googleapis.com/terraform-microsoft-on-gcp-bucket/configure-adfs.ps1"
 }
 
 variable "remote_script_sha256_checksum" {
   type        = string
   description = "SHA265 checksum value of remote script"
-  default = "3F9A8F18E7943F2BF2C1F8A85E1AD19434B1DADE48890E16181F203C2C19842D"
+  default     = "CA70AD5DC73F75F7A582D508AE30A2D4866B42D1128808344A15747513594A17"
 }
 
 variable "instance_labels" {
-  type        = map
+  type        = map(any)
   description = "One or more Key Value pairs of instance label to target in map format eg. {\"environment\" = \"dev\"}"
   default = {
     "env" = "test"

@@ -5,17 +5,33 @@ main:
       assign:
         - project: '$${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}'
         - zone: '${zone}'
-        - remote_script_location: '${remote_script_location}'
-        - remote_script_sha256_checksum: '${remote_script_sha256_checksum}'
-        - query_params1: '?osPolicyAssignmentId='
-        - query_params1_val: '${runcommand_name}'
         - osconfig_base_url: '$${string("https://osconfig.googleapis.com/v1alpha/")}'
         - set_policy_url: '$${osconfig_base_url + "projects/" + project + "/locations/" + zone + "/osPolicyAssignments"}'
         
-
   - set_policy:
       try:
         steps:
+          - init: 
+              assign:
+              - domainName: '${domainName}'
+              - managedad_base_url: '$${string("https://managedidentities.googleapis.com/v1/projects/")}'
+              - managedad_reset_admin_pw_url: '$${managedad_base_url + '$${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}' + "/locations/global/domains/" + domainName}'
+              - remote_script_location: '${remote_script_location}'
+              - remote_script_sha256_checksum: '${remote_script_sha256_checksum}'
+              - query_params1: '?osPolicyAssignmentId='
+              - query_params1_val: '${runcommand_name}'
+              - localAdminUsername: '${localAdminUsername}'
+              - localAdminPassword: '${localAdminPassword}'
+              - managedADAdminUsername: '${managedADAdminUsername}'
+          
+          - reset_managed_ad_password:
+              call: http.post
+              args:
+                url: '$${managedad_reset_admin_pw_url}'
+                auth:
+                  type: OAuth2
+              result: reset_password_response
+              
           - set_policy_new:
               call: http.post
               args:
@@ -35,6 +51,12 @@ main:
                                 "id": "invoke-remote-ps-script",
                                 "exec": {
                                   "validate": {
+                                    "args": [
+                                    " -localAdminUsername ${localAdminUsername}",
+                                    " -localAdminPassword ${localAdminPassword}",
+                                    " -managedADAdminUsername ${managedADAdminUsername}",
+                                    " -managedADAdminPassword $${reset_password_response.password}"
+                                    ]
                                     "interpreter": "POWERSHELL",
                                     "file": {
                                       "remote": {

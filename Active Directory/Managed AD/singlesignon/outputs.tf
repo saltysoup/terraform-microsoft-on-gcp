@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- output "ad_domain" {
-     description = "List of all details for Managed AD"
-     value = google_active_directory_domain.ad_domain.*
- }
+output "ad_domain" {
+  description = "List of all details for Managed AD"
+  value       = google_active_directory_domain.ad_domain.*
+}

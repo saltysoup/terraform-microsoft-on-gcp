@@ -20,6 +20,12 @@ resource "random_pet" "name" {
   length = 1
 }
 
+resource "random_password" "password" {
+  length           = 8
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 ## VPC stuff
 # Create a VPC
 resource "google_compute_network" "vpc_network" {
@@ -36,12 +42,12 @@ resource "google_compute_firewall" "rules" {
   description = "Creates firewall rule targeting tagged instances"
 
   allow {
-    protocol  = "tcp"
-    ports     = ["3389"]
+    protocol = "tcp"
+    ports    = ["3389"]
   }
 
   source_ranges = ["35.235.240.0/20"]
-  target_tags = ["${google_compute_network.vpc_network.name}-adfs"]
+  target_tags   = ["${google_compute_network.vpc_network.name}-adfs"]
 }
 
 # Create a Managed AD subnet
@@ -63,11 +69,11 @@ resource "google_compute_subnetwork" "subnet_adfs" {
 ## Managed AD stuff
 
 resource "google_active_directory_domain" "ad_domain" {
-  project = "${var.project_id}"
-  domain_name       = "${var.domain_name}"
-  locations         = "${var.locations}"
+  project           = var.project_id
+  domain_name       = var.domain_name
+  locations         = var.locations
   reserved_ip_range = google_compute_subnetwork.subnet_managedad.ip_cidr_range
-  admin = "${var.admin_account}"
+  admin             = var.admin_account
 }
 
 ## ADFS VM stuff
@@ -89,13 +95,13 @@ resource "google_compute_instance" "adfs_instance" {
   name         = "${random_pet.name.id}-adfs-vm"
   machine_type = var.adfs_instance_machine_type
   zone         = var.zone
-  
+
   # target instance labels
   for_each = var.instance_labels
   labels = {
     "${each.key}" = "${each.value}"
   }
-  
+
   tags = ["${google_compute_network.vpc_network.name}-adfs"]
 
   boot_disk {
@@ -110,6 +116,10 @@ resource "google_compute_instance" "adfs_instance" {
     access_config {
       // Ephemeral public IP
     }
+  }
+
+  metadata = {
+    windows-startup-script-cmd = "net user /add ${var.local_admin_account} ${random_password.password.result} & net localgroup administrators ${var.local_admin_account} /add"
   }
 
   service_account {
@@ -150,15 +160,19 @@ resource "google_workflows_workflow" "runcommand" {
   # Imported main workflow YAML file
   source_contents = templatefile("${path.module}/templates/workflow.yaml",
     {
-      zone = var.zone
-      remote_script_location = var.remote_script_location
+      zone                          = var.zone
+      remote_script_location        = var.remote_script_location
       remote_script_sha256_checksum = var.remote_script_sha256_checksum
-      runcommand_name = "runcommand-${random_pet.name.id}"
-      label_key = "${each.key}"
-      label_value = "${each.value}"
+      runcommand_name               = "runcommand-${random_pet.name.id}"
+      label_key                     = "${each.key}"
+      label_value                   = "${each.value}"
+      domainName                    = var.domain_name
+      localAdminUsername            = var.local_admin_account
+      localAdminPassword            = random_password.password.result
+      managedADAdminUsername        = var.managedad_admin_account
     }
   )
-    depends_on = [
+  depends_on = [
     google_compute_instance.adfs_instance
   ]
 }
