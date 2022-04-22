@@ -1,16 +1,3 @@
-<#
-param (
-    [Parameter(Mandatory=$true)]
-    [string]$localAdminUsername = 'localAdminUsername',
-    [Parameter(Mandatory=$true)]
-    [string]$localAdminPassword = 'localAdminPassword',
-    [Parameter(Mandatory=$true)]
-    [string]$ManagedADAdminUsername = 'ManagedADAdminUsername',
-    [Parameter(Mandatory=$true)]
-    [string]$ManagedADAdminPassword = 'ManagedADAdminPassword'
-)
-#>
-
 param (
     [Parameter(Mandatory=$true)]
     [string]$first,
