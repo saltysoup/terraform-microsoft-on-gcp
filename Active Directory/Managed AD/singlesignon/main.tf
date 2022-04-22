@@ -73,7 +73,7 @@ resource "google_active_directory_domain" "ad_domain" {
   domain_name       = var.domain_name
   locations         = var.locations
   reserved_ip_range = google_compute_subnetwork.subnet_managedad.ip_cidr_range
-  admin             = var.admin_account
+  admin             = var.local_admin_account
 }
 
 ## ADFS VM stuff
